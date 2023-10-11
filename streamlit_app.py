@@ -1,38 +1,48 @@
-from collections import namedtuple
-import altair as alt
-import math
+# Import required libraries
 import pandas as pd
 import streamlit as st
+import plotly.express as px
 
-"""
-# Welcome to Streamlit!
+# Create a sample dataframe
+data = {'Date': ['10-10-2023', '10-10-2023', '10-10-2023', '10-10-2023', '10-10-2023', '10-10-2023', '10-10-2023'],
+        'Broker': ['HSO', 'DAS', 'HAP', 'MCA', 'MHI', 'TSM', 'KDH'],
+        'PnL': [2380.6, 7906.5, 19465.6, 9011.2, 18008, 29309.2, 3331.6],
+        'Total': [89413, 89413, 89413, 89413, 89413, 89413, 89413]}
 
-Edit `/streamlit_app.py` to customize this app to your heart's desire :heart:
+df = pd.DataFrame(data)
+df['Date'] = pd.to_datetime(df['Date'])  # Convert the Date column to datetime
 
-If you have any questions, checkout our [documentation](https://docs.streamlit.io) and [community
-forums](https://discuss.streamlit.io).
+# Streamlit app
+st.title('Broker PnL Dashboard')
 
-In the meantime, below is an example of what you can do with just a few lines of code:
-"""
+# Display data table
+st.write("### Data Table")
+st.write(df)
 
+# Display a bar chart
+st.write("### PnL by Broker on 10-10-2023")
+fig = px.bar(df, x='Broker', y='PnL', text='PnL', title='PnL by Broker')
+st.plotly_chart(fig)
 
-with st.echo(code_location='below'):
-    total_points = st.slider("Number of points in spiral", 1, 5000, 2000)
-    num_turns = st.slider("Number of turns in spiral", 1, 100, 9)
+# Monthly and yearly summary
+df['Year'] = df['Date'].dt.year
+df['Month'] = df['Date'].dt.month
 
-    Point = namedtuple('Point', 'x y')
-    data = []
+monthly_summary = df.groupby(['Year', 'Month', 'Broker'])['PnL'].sum().reset_index()
+yearly_summary = df.groupby(['Year', 'Broker'])['PnL'].sum().reset_index()
 
-    points_per_turn = total_points / num_turns
+# Display Monthly Summary
+st.write("### Monthly PnL Summary")
+st.write(monthly_summary.pivot(index='Broker', columns=['Year', 'Month'], values='PnL').fillna(0))
 
-    for curr_point_num in range(total_points):
-        curr_turn, i = divmod(curr_point_num, points_per_turn)
-        angle = (curr_turn + 1) * 2 * math.pi * i / points_per_turn
-        radius = curr_point_num / total_points
-        x = radius * math.cos(angle)
-        y = radius * math.sin(angle)
-        data.append(Point(x, y))
+# Monthly PnL bar chart
+st.write("### Monthly PnL Bar Chart")
+month_selected = st.selectbox('Select Month', monthly_summary['Month'].unique())
+monthly_data = monthly_summary[monthly_summary['Month'] == month_selected]
+fig_monthly = px.bar(monthly_data, x='Broker', y='PnL', text='PnL', title=f'Monthly PnL for {month_selected}')
+st.plotly_chart(fig_monthly)
 
-    st.altair_chart(alt.Chart(pd.DataFrame(data), height=500, width=500)
-        .mark_circle(color='#0068c9', opacity=0.5)
-        .encode(x='x:Q', y='y:Q'))
+# Yearly PnL bar chart
+st.write("### Yearly PnL Bar Chart")
+fig_yearly = px.bar(yearly_summary, x='Broker', y='PnL', text='PnL', title='Yearly PnL by Broker')
+st.plotly_chart(fig_yearly)
